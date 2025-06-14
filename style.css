@@ -1,0 +1,27 @@
+.container {
+    height: 400px;
+    width: 400px;
+    background-color: #6f6f6f;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 20px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 20px;
+}
+
+.box {
+    width: 100px;
+    height: 100px;
+    background-color: #d3fad4;
+    margin: 10px;
+    border-radius: 20px;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+    font-size: 50px;
+    color: rgb(76, 76, 76);
+    
+}

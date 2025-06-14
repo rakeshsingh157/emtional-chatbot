@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotional Role-Play Chatbot</title>
+    <style>
+        :root {
+            --primary: #ff7eb9;
+            --secondary: #23232b;
+            --bubble-user: #4f8cff;
+            --bubble-ai: #23232b;
+            --bubble-user-gradient: linear-gradient(135deg, #4f8cff 60%, #1e3c72 100%);
+            --bubble-ai-gradient: linear-gradient(135deg, #23232b 60%, #3a3a4d 100%);
+            --bg-overlay: rgba(24, 24, 32, 0.80);
+            --border-radius: 20px;
+            --font: 'Segoe UI', 'Roboto', Arial, sans-serif;
+            --input-bg: #2d2d34; /* Slightly lighter than secondary for inputs */
+            --border-color: rgba(255, 255, 255, 0.15);
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-dark: rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: url('https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=800&q=80') no-repeat center center fixed;
+            background-size: cover;
+            position: relative;
+            font-family: var(--font);
+            color: #e0e0e0; /* Default text color */
+            transition: background-image 0.4s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-overlay);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 450px; /* Slightly wider */
+            width: 95%; /* Responsive width */
+            height: 90vh; /* Adjusted height */
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 5px 30px var(--shadow-dark);
+            background: rgba(30, 32, 40, 0.95); /* Slightly less transparent */
+            border-radius: 25px; /* More rounded */
+            overflow: hidden;
+            border: 1px solid var(--border-color); /* Subtle border */
+        }
+
+        header {
+            padding: 18px 0 12px 0;
+            background: transparent;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #fff;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            border-bottom: 1px solid var(--border-color); /* Header bottom border */
+        }
+
+        h1 {
+            font-size: 1.6rem; /* Slightly larger */
+            background: linear-gradient(to right, var(--primary), #ffb8c6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 15px;
+            background: transparent;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 15px 10px 15px; /* More padding */
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            background: transparent;
+            scrollbar-width: thin;
+            scrollbar-color: #555 #333; /* Improved scrollbar */
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #333;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 10px;
+            border: 2px solid #333;
+        }
+
+        .message {
+            max-width: 85%; /* Slightly wider messages */
+            padding: 14px 18px;
+            border-radius: var(--border-radius);
+            font-size: 1.05em; /* Slightly smaller font for better fit */
+            line-height: 1.5;
+            box-shadow: 0 2px 8px var(--shadow-light);
+            position: relative;
+            word-break: break-word;
+            animation: fadeInMsg 0.4s ease-out; /* Added ease-out */
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: var(--bubble-user-gradient);
+            color: #fff;
+            border-bottom-right-radius: 8px; /* More consistent rounding */
+            border-top-right-radius: 20px;
+            border-bottom-left-radius: 20px;
+            border-top-left-radius: 20px;
+        }
+
+        .bot-message {
+            align-self: flex-start;
+            background: var(--bubble-ai-gradient);
+            color: #ffe6fa;
+            border-bottom-left-radius: 8px; /* More consistent rounding */
+            border-top-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            border-top-right-radius: 20px;
+            padding-left: 60px; /* Space for avatar */
+        }
+        
+        .bot-message .avatar {
+            position: absolute;
+            left: 10px; /* Position relative to message bubble */
+            top: 50%; /* Center vertically */
+            transform: translateY(-50%); /* Adjust for vertical centering */
+            width: 40px; /* Slightly larger avatar */
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #fff3; /* Slightly more visible border */
+            box-shadow: 0 2px 8px #0004;
+            background: #fff2;
+        }
+
+        .message-time {
+            font-size: 0.75rem; /* Slightly larger timestamp */
+            opacity: 0.7;
+            margin-top: 6px; /* More space from content */
+            text-align: right;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .chat-input-container {
+            padding: 15px; /* More padding */
+            background: transparent;
+            display: flex;
+            gap: 10px; /* More space between input and button */
+            border-top: 1px solid var(--border-color);
+            align-items: flex-end; /* Align input and button to bottom */
+        }
+
+        .chat-input {
+            flex: 1;
+            resize: none;
+            border: none;
+            border-radius: 18px; /* More rounded */
+            padding: 12px 16px; /* Increased padding */
+            font-size: 1em;
+            min-height: 48px; /* Larger min-height */
+            max-height: 120px; /* Increased max-height */
+            outline: none;
+            background: var(--input-bg);
+            color: #fff;
+            box-shadow: 0 2px 8px var(--shadow-light);
+            transition: background 0.2s, box-shadow 0.2s;
+            font-family: var(--font);
+        }
+
+        .chat-input:focus {
+            background: #3a3a4d; /* Darker on focus */
+            box-shadow: 0 0 0 2px var(--primary); /* Highlight on focus */
+        }
+
+        .send-button {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 50%; /* Circular button */
+            width: 48px; /* Fixed width and height for circular button */
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2em; /* Larger icon */
+            box-shadow: 0 2px 8px var(--shadow-dark);
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .send-button:hover {
+            background: #ff4f90;
+            transform: scale(1.05);
+        }
+
+        .send-button:active {
+            transform: scale(0.95);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            padding: 8px 15px; /* Adjusted padding */
+            justify-content: flex-end;
+            border-bottom: 1px solid var(--border-color); /* Added border */
+        }
+
+        .action-button {
+            background: var(--input-bg);
+            color: #fff;
+            border: none;
+            border-radius: 12px; /* Slightly more rounded */
+            padding: 8px 14px; /* Increased padding */
+            cursor: pointer;
+            font-size: 0.9em;
+            opacity: 0.85;
+            transition: background 0.2s, opacity 0.2s, transform 0.2s;
+            box-shadow: 0 2px 5px var(--shadow-light);
+        }
+
+        .action-button:hover {
+            background: #444;
+            opacity: 1;
+            transform: translateY(-2px);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+        }
+
+        .typing-indicator {
+            font-style: italic;
+            color: #b3b3b3;
+            padding-left: 60px; /* Align with bot messages */
+            opacity: 0.8;
+        }
+
+        .settings-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 48px; /* Slightly larger */
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 50;
+            box-shadow: 0 4px 15px var(--shadow-dark);
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .settings-button:hover {
+            background: #ff4f90;
+            transform: rotate(15deg);
+        }
+
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 320px; /* Slightly wider */
+            height: 100%;
+            background: #1a1a20; /* Darker background */
+            box-shadow: -5px 0 20px var(--shadow-dark);
+            padding: 30px 25px; /* Increased padding */
+            transform: translateX(100%);
+            transition: transform 0.3s ease-out; /* Added ease-out */
+            z-index: 100;
+            overflow-y: auto;
+            color: #fff;
+        }
+
+        .settings-panel.open {
+            transform: translateX(0);
+        }
+
+        .close-settings {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 2rem; /* Larger close button */
+            cursor: pointer;
+            color: #fff;
+            transition: transform 0.2s;
+        }
+
+        .close-settings:hover {
+            transform: rotate(90deg);
+        }
+
+        .settings-panel h2 {
+            margin-bottom: 25px; /* More space */
+            color: var(--primary);
+            text-align: center;
+            font-size: 1.8rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .setting-group {
+            margin-bottom: 25px; /* More space */
+            padding-bottom: 15px;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.08); /* Dotted separator */
+        }
+        
+        .setting-group:last-of-type {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .setting-group h3 {
+            margin-bottom: 15px; /* More space */
+            color: #ffb8c6; /* Lighter primary shade */
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 8px; /* More space */
+            font-size: 0.95em;
+            color: #e0e0e0;
+        }
+
+        .setting-group input[type="text"],
+        .setting-group input[type="range"],
+        .setting-group select,
+        .setting-group textarea { /* Added textarea for script input */
+            width: 100%;
+            padding: 10px 12px; /* Increased padding */
+            border-radius: 10px; /* More rounded */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 1em;
+            background: #292a2d;
+            color: #fff;
+            margin-bottom: 10px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        
+        .setting-group input[type="text"]:focus,
+        .setting-group input[type="range"]:focus,
+        .setting-group select:focus,
+        .setting-group textarea:focus {
+            border-color: var(--primary);
+            background: #3a3a4d;
+        }
+
+        .character-option {
+            padding: 15px;
+            background: #292a2d;
+            border-radius: 15px; /* More rounded */
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            border: 1px solid transparent; /* Added border */
+        }
+
+        .character-option:hover {
+            background: #3a3a4d;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px var(--shadow-light);
+        }
+        
+        .character-option.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary);
+            background: #3a3a4d;
+        }
+
+        .character-option img {
+            width: 55px; /* Slightly larger */
+            height: 55px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary); /* Highlight with primary color */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
+        .character-info {
+            flex: 1;
+        }
+
+        .character-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 1.1em;
+            color: #fff;
+        }
+
+        .character-desc {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            color: #ccc;
+            line-height: 1.4;
+        }
+        
+        /* New Character Button */
+        .add-new-character-button {
+            width: 100%;
+            padding: 12px 15px;
+            background: #5a5a60; /* A neutral darker shade */
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+            margin-top: 15px;
+            box-shadow: 0 2px 8px var(--shadow-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .add-new-character-button:hover {
+            background: #6a6a70;
+            transform: translateY(-2px);
+        }
+        
+        /* Add Character Form */
+        #addCharacterForm {
+            display: none; /* Hidden by default */
+            padding: 15px;
+            background: #292a2d;
+            border-radius: 15px;
+            margin-top: 20px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        #addCharacterForm.open {
+            display: block;
+        }
+
+        #addCharacterForm label {
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        #addCharacterForm input[type="text"],
+        #addCharacterForm textarea {
+            background: #3a3a4d;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 15px;
+            resize: vertical;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 15px;
+        }
+
+        .form-buttons button {
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            
+            font-size: 0.95em;
+            transition: background 0.2s;
+        }
+
+        .form-buttons .submit-button {
+            background: var(--primary);
+            color: white;
+        }
+
+        .form-buttons .submit-button:hover {
+            background: #ff4f90;
+        }
+
+        .form-buttons .cancel-button {
+            background: #555;
+            color: white;
+        }
+
+        .form-buttons .cancel-button:hover {
+            background: #777;
+        }
+
+        .no-characters-message {
+            text-align: center;
+            padding: 20px;
+            color: #aaa;
+            font-style: italic;
+        }
+
+        .memory-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            z-index: 50;
+            box-shadow: 0 2px 8px var(--shadow-dark);
+        }
+
+        @keyframes fadeInMsg {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                align-items: flex-start;
+                padding-top: 10px;
+            }
+            .container {
+                max-width: 100vw;
+                height: 98vh;
+                margin: 0;
+                border-radius: 0;
+                border: none;
+                box-shadow: none;
+            }
+            
+            header {
+                padding: 15px 0 10px 0;
+            }
+            
+            h1 {
+                font-size: 1.4rem;
+            }
+
+            .chat-messages {
+                padding: 12px 10px 4px 10px;
+            }
+
+            .message {
+                font-size: 0.95em;
+                padding: 12px 12px;
+            }
+            
+            .bot-message {
+                padding-left: 50px;
+            }
+            
+            .bot-message .avatar {
+                width: 36px;
+                height: 36px;
+                left: 8px;
+            }
+
+            .chat-input-container {
+                padding: 10px;
+                gap: 6px;
+            }
+            
+            .chat-input {
+                min-height: 44px;
+                max-height: 80px;
+                padding: 10px 14px;
+                border-radius: 16px;
+            }
+            
+            .send-button {
+                width: 44px;
+                height: 44px;
+                font-size: 1.1em;
+            }
+
+            .settings-button {
+                right: 10px;
+                top: 10px;
+                width: 42px;
+                height: 42px;
+            }
+
+            .settings-panel {
+                width: 100%;
+                padding: 20px 15px;
+            }
+            
+            .close-settings {
+                font-size: 1.8rem;
+            }
+            
+            .memory-indicator {
+                bottom: 10px;
+                right: 10px;
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="settings-button" id="settingsButton">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+    </button>
+    
+    <div class="settings-panel" id="settingsPanel">
+        <button class="close-settings" id="closeSettings">&times;</button>
+        <h2>Settings</h2>
+        <div class="setting-group">
+            <h3><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-users"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Character</h3>
+            <div id="characterOptions">
+                <div class="no-characters-message">No characters yet. Add your first character below!</div>
+            </div>
+            <button class="add-new-character-button" id="addNewCharacterButton">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus-circle"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                Add New Character
+            </button>
+            <div id="addCharacterForm">
+                <label for="newCharacterName">Character Name:</label>
+                <input type="text" id="newCharacterName" placeholder="e.g., Confidant, Professor">
+                
+                <label for="newCharacterDescription">Description:</label>
+                <textarea id="newCharacterDescription" rows="3" placeholder="e.g., A wise and empathetic listener, always offers practical advice."></textarea>
+                
+                <label for="newCharacterAvatar">Avatar URL:</label>
+                <input type="text" id="newCharacterAvatar" placeholder="e.g., https://example.com/avatar.jpg">
+                
+                <label for="newCharacterPrompt">Initial Prompt (System Message):</label>
+                <textarea id="newCharacterPrompt" rows="5" placeholder="e.g., You are a wise and empathetic confidant. Your responses should be supportive, understanding, and offer guidance."></textarea>
+                
+                <label for="newCharacterGreeting">Initial Greeting:</label>
+                <input type="text" id="newCharacterGreeting" placeholder="e.g., 'Hello, what's on your mind today?'">
+
+                <div class="form-buttons">
+                    <button class="submit-button" id="saveNewCharacter">Save Character</button>
+                    <button class="cancel-button" id="cancelNewCharacter">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div class="setting-group">
+            <h3><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-cpu"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><path d="M9 9h6v6H9z"></path><path d="M9 1v3"></path><path d="M15 1v3"></path><path d="M9 20v3"></path><path d="M15 20v3"></path><path d="M20 9h3"></path><path d="M20 15h3"></path><path d="M1 9h3"></path><path d="M1 15h3"></path></svg> API Settings</h3>
+            <label for="apiKey">API Key:</label>
+            <input type="text" id="apiKey" value="2d128b1e25206819f2fc64de90cec9d2cf1670bffd37635e9fb0646577efde0f">
+            <label for="modelSelect">Model:</label>
+            <select id="modelSelect">
+                <option value="deepseek-ai/DeepSeek-V3">DeepSeek-V3</option>
+                <option value="mistralai/Mixtral-8x7B-Instruct-v0.1">Mixtral-8x7B</option>
+                <option value="togethercomputer/llama-2-70b-chat">Llama 2 70B</option>
+            </select>
+        </div>
+        <div class="setting-group">
+            <h3><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-database"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M21 19c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14"></path></svg> Memory</h3>
+            <label for="memoryLength">Memory Length (messages):</label>
+            <input type="range" id="memoryLength" min="5" max="50" value="20">
+            <span id="memoryLengthValue">20</span>
+        </div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1>Emotional Role-Play Chat</h1>
+        </header>
+        
+        <div class="chat-container">
+            <div class="chat-header">
+                <div id="currentCharacter">No Character Selected</div>
+                <div id="connectionStatus">Connected</div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-button" id="regenerateButton">Regenerate</button>
+                <button class="action-button" id="continueButton">Continue</button>
+                <button class="action-button" id="undoButton">Undo</button>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot-message" style="text-align: center; padding-left: 18px;">
+                    Welcome! Please go to settings to create your first character.
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <textarea class="chat-input" id="chatInput" placeholder="Type your message..." autocomplete="off" disabled></textarea>
+                <button class="send-button" id="sendButton" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="memory-indicator" id="memoryIndicator">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        Memory: 0/20 messages
+    </div>
+    
+    <script>
+        // DOM Elements
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const regenerateButton = document.getElementById('regenerateButton');
+        const continueButton = document.getElementById('continueButton');
+        const undoButton = document.getElementById('undoButton');
+        const settingsButton = document.getElementById('settingsButton');
+        const closeSettings = document.getElementById('closeSettings');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const characterOptionsDiv = document.getElementById('characterOptions');
+        const currentCharacterDisplay = document.getElementById('currentCharacter');
+        const memoryIndicator = document.getElementById('memoryIndicator');
+        const memoryLength = document.getElementById('memoryLength');
+        const memoryLengthValue = document.getElementById('memoryLengthValue');
+        const apiKeyInput = document.getElementById('apiKey');
+        const modelSelect = document.getElementById('modelSelect');
+
+        // New Character Elements
+        const addNewCharacterButton = document.getElementById('addNewCharacterButton');
+        const addCharacterForm = document.getElementById('addCharacterForm');
+        const newCharacterNameInput = document.getElementById('newCharacterName');
+        const newCharacterDescriptionInput = document.getElementById('newCharacterDescription');
+        const newCharacterAvatarInput = document.getElementById('newCharacterAvatar');
+        const newCharacterPromptInput = document.getElementById('newCharacterPrompt');
+        const newCharacterGreetingInput = document.getElementById('newCharacterGreeting');
+        const saveNewCharacterButton = document.getElementById('saveNewCharacter');
+        const cancelNewCharacterButton = document.getElementById('cancelNewCharacter');
+        
+        // Character Data - Start with empty object
+        let characters = {};
+        let currentCharacterType = null;
+        
+        // State
+        let messages = [];
+        let isTyping = false;
+        let lastUserMessage = null;
+        let lastBotMessage = null;
+        
+        // Event Listeners
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        regenerateButton.addEventListener('click', regenerateMessage);
+        continueButton.addEventListener('click', continueMessage);
+        undoButton.addEventListener('click', undoMessage);
+        
+        settingsButton.addEventListener('click', () => {
+            settingsPanel.classList.add('open');
+            renderCharacterOptions();
+        });
+        
+        closeSettings.addEventListener('click', () => {
+            settingsPanel.classList.remove('open');
+        });
+        
+        characterOptionsDiv.addEventListener('click', (e) => {
+            const characterOption = e.target.closest('.character-option');
+            if (characterOption) {
+                currentCharacterType = characterOption.dataset.character;
+                currentCharacterDisplay.textContent = characters[currentCharacterType].name;
+                settingsPanel.classList.remove('open');
+                
+                // Enable chat input and buttons
+                chatInput.disabled = false;
+                sendButton.disabled = false;
+                regenerateButton.disabled = false;
+                continueButton.disabled = false;
+                undoButton.disabled = false;
+                
+                // Clear existing messages and start new chat with selected character
+                messages = []; 
+                chatMessages.innerHTML = ''; // Clear the welcome message
+                
+                // Add greeting from the selected character
+                addMessage('assistant', characters[currentCharacterType].greeting, characters[currentCharacterType].avatar);
+                messages.push({
+                    role: 'assistant',
+                    content: characters[currentCharacterType].greeting,
+                    timestamp: new Date().toISOString(),
+                    avatar: characters[currentCharacterType].avatar
+                });
+                
+                // Add a system message to set the character's persona for the LLM
+                messages.unshift({
+                    role: 'system',
+                    content: characters[currentCharacterType].prompt
+                });
+                
+                updateMemoryIndicator();
+            }
+        });
+        
+        memoryLength.addEventListener('input', () => {
+            memoryLengthValue.textContent = memoryLength.value;
+            updateMemoryIndicator();
+        });
+
+        // New Character Feature Event Listeners
+        addNewCharacterButton.addEventListener('click', () => {
+            addCharacterForm.classList.add('open');
+            addNewCharacterButton.style.display = 'none';
+            // Clear form fields
+            newCharacterNameInput.value = '';
+            newCharacterDescriptionInput.value = '';
+            newCharacterAvatarInput.value = '';
+            newCharacterPromptInput.value = '';
+            newCharacterGreetingInput.value = '';
+        });
+
+        cancelNewCharacterButton.addEventListener('click', () => {
+            addCharacterForm.classList.remove('open');
+            addNewCharacterButton.style.display = 'flex';
+        });
+
+        saveNewCharacterButton.addEventListener('click', () => {
+            const name = newCharacterNameInput.value.trim();
+            const description = newCharacterDescriptionInput.value.trim();
+            const avatar = newCharacterAvatarInput.value.trim();
+            const prompt = newCharacterPromptInput.value.trim();
+            const greeting = newCharacterGreetingInput.value.trim();
+
+            if (name && description && avatar && prompt && greeting) {
+                const characterKey = name.toLowerCase().replace(/\s/g, '_'); // Better key generation
+                characters[characterKey] = { 
+                    name, 
+                    description, 
+                    avatar, 
+                    prompt, 
+                    greeting 
+                };
+                
+                // If this is the first character, set it as current
+                if (Object.keys(characters).length === 1) {
+                    currentCharacterType = characterKey;
+                    currentCharacterDisplay.textContent = name;
+                    
+                    // Enable chat input and buttons
+                    chatInput.disabled = false;
+                    sendButton.disabled = false;
+                    regenerateButton.disabled = false;
+                    continueButton.disabled = false;
+                    undoButton.disabled = false;
+                    
+                    // Clear welcome message and start chat with new character
+                    messages = [];
+                    chatMessages.innerHTML = '';
+                    
+                    addMessage('assistant', greeting, avatar);
+                    messages.push({
+                        role: 'assistant',
+                        content: greeting,
+                        timestamp: new Date().toISOString(),
+                        avatar: avatar
+                    });
+                    
+                    messages.unshift({
+                        role: 'system',
+                        content: prompt
+                    });
+                    
+                    updateMemoryIndicator();
+                }
+                
+                renderCharacterOptions();
+                addCharacterForm.classList.remove('open');
+                addNewCharacterButton.style.display = 'flex';
+                
+                // Save to localStorage
+                localStorage.setItem('characters', JSON.stringify(characters));
+                localStorage.setItem('currentCharacter', currentCharacterType);
+            } else {
+                alert('Please fill in all fields for the new character.');
+            }
+        });
+
+        // Load characters from localStorage if available
+        function loadFromLocalStorage() {
+            const savedCharacters = localStorage.getItem('characters');
+            if (savedCharacters) {
+                characters = JSON.parse(savedCharacters);
+                const savedCurrentChar = localStorage.getItem('currentCharacter');
+                if (savedCurrentChar && characters[savedCurrentChar]) {
+                    currentCharacterType = savedCurrentChar;
+                    currentCharacterDisplay.textContent = characters[currentCharacterType].name;
+                    
+                    // Enable chat input and buttons if we have a character
+                    chatInput.disabled = false;
+                    sendButton.disabled = false;
+                    regenerateButton.disabled = false;
+                    continueButton.disabled = false;
+                    undoButton.disabled = false;
+                    
+                    // Clear welcome message and show character greeting
+                    messages = [];
+                    chatMessages.innerHTML = '';
+                    
+                    const char = characters[currentCharacterType];
+                    addMessage('assistant', char.greeting, char.avatar);
+                    messages.push({
+                        role: 'assistant',
+                        content: char.greeting,
+                        timestamp: new Date().toISOString(),
+                        avatar: char.avatar
+                    });
+                    
+                    messages.unshift({
+                        role: 'system',
+                        content: char.prompt
+                    });
+                    
+                    updateMemoryIndicator();
+                }
+            }
+        }
+        
+        // Render character options in settings
+        function renderCharacterOptions() {
+            characterOptionsDiv.innerHTML = '';
+            
+            if (Object.keys(characters).length === 0) {
+                characterOptionsDiv.innerHTML = '<div class="no-characters-message">No characters yet. Add your first character below!</div>';
+                return;
+            }
+            
+            for (const key in characters) {
+                const char = characters[key];
+                const charOptionDiv = document.createElement('div');
+                charOptionDiv.classList.add('character-option');
+                if (key === currentCharacterType) {
+                    charOptionDiv.classList.add('selected');
+                }
+                charOptionDiv.dataset.character = key;
+                charOptionDiv.innerHTML = `
+                    <img src="${char.avatar}" alt="${char.name}">
+                    <div class="character-info">
+                        <div class="character-name">${char.name}</div>
+                        <div class="character-desc">${char.description}</div>
+                    </div>
+                `;
+                characterOptionsDiv.appendChild(charOptionDiv);
+            }
+        }
+        
+        // Render messages
+        function renderMessages() {
+            chatMessages.innerHTML = '';
+            messages.filter(msg => msg.role !== 'system').forEach(msg => {
+                addMessage(msg.role, msg.content, msg.avatar, msg.timestamp);
+            });
+        }
+        
+        // Add message to UI
+        function addMessage(role, content, avatar = null, timestamp = new Date().toISOString()) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', `${role}-message`);
+            
+            const time = new Date(timestamp);
+            const timeString = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            if (role === 'assistant' && avatar) {
+                messageDiv.innerHTML = `
+                    <img class="avatar" src="${avatar}" alt="${characters[currentCharacterType].name}">
+                    ${content}
+                    <div class="message-time">${timeString}</div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    ${content}
+                    <div class="message-time">${timeString}</div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Show typing indicator
+        function showTypingIndicator() {
+            if (isTyping) return;
+            
+            isTyping = true;
+            const typingDiv = document.createElement('div');
+            typingDiv.classList.add('message', 'bot-message', 'typing-indicator');
+            
+            const currentAvatar = characters[currentCharacterType].avatar;
+            
+            typingDiv.innerHTML = `
+                <img class="avatar" src="${currentAvatar}" alt="${characters[currentCharacterType].name}">
+                ${characters[currentCharacterType].name} is typing...
+            `;
+            
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            isTyping = false;
+            const typingIndicator = document.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+        
+        // Get character prompt
+        function getCharacterPrompt(characterType) {
+            return characters[characterType].prompt;
+        }
+
+        // Send message
+        async function sendMessage() {
+            if (!currentCharacterType) return;
+            
+            const content = chatInput.value.trim();
+            if (!content) return;
+            
+            // Save user message
+            const userMessage = {
+                role: 'user',
+                content: content,
+                timestamp: new Date().toISOString()
+            };
+            
+            messages.push(userMessage);
+            addMessage('user', content);
+            lastUserMessage = userMessage;
+            
+            chatInput.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            try {
+                // Prepare messages for API (respect memory length)
+                const memorySize = parseInt(memoryLength.value);
+                // Filter out system messages before slicing for memory, then add the current system prompt
+                const conversationalMessages = messages.filter(msg => msg.role !== 'system');
+                let recentMessages = conversationalMessages.slice(-memorySize);
+                
+                // Add current system message for character at the beginning of the prompt
+                recentMessages.unshift({
+                    role: 'system',
+                    content: getCharacterPrompt(currentCharacterType)
+                });
+
+                // Call Together API
+                const response = await fetch('https://api.together.xyz/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKeyInput.value}`
+                    },
+                    body: JSON.stringify({
+                        model: modelSelect.value,
+                        messages: recentMessages,
+                        temperature: 0.7,
+                        max_tokens: 1000,
+                        stop: ['</s>']
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} - ${await response.text()}`);
+                }
+                
+                const data = await response.json();
+                const botMessage = data.choices[0].message;
+                
+                // Get avatar for current character
+                const currentAvatar = characters[currentCharacterType].avatar;
+                
+                // Save bot message
+                const fullBotMessage = {
+                    role: 'assistant',
+                    content: botMessage.content,
+                    timestamp: new Date().toISOString(),
+                    avatar: currentAvatar
+                };
+                
+                messages.push(fullBotMessage);
+                lastBotMessage = fullBotMessage;
+                
+                // Update UI
+                hideTypingIndicator();
+                addMessage('assistant', botMessage.content, currentAvatar);
+                updateMemoryIndicator();
+                
+                // Save to localStorage
+                localStorage.setItem('characters', JSON.stringify(characters));
+                localStorage.setItem('currentCharacter', currentCharacterType);
+                
+            } catch (error) {
+                hideTypingIndicator();
+                console.error('Error:', error);
+                
+                // Show error message
+                const errorMessage = {
+                    role: 'assistant',
+                    content: `Sorry, I encountered an error: ${error.message}. Please check your API key and try again.`,
+                    timestamp: new Date().toISOString(),
+                    avatar: characters[currentCharacterType].avatar
+                };
+                
+                messages.push(errorMessage);
+                addMessage('assistant', errorMessage.content, errorMessage.avatar);
+            }
+        }
+        
+        // Regenerate last bot message
+        async function regenerateMessage() {
+            if (!currentCharacterType || !lastUserMessage || messages.length < 2) return;
+            
+            // Remove last bot message from history (if it exists)
+            if (lastBotMessage) {
+                messages = messages.filter(msg => msg !== lastBotMessage);
+                // Remove the last displayed message from UI
+                chatMessages.removeChild(chatMessages.lastChild);
+            }
+            
+            // Re-send the last user message to trigger a new bot response
+            const contentToResend = lastUserMessage.content;
+
+            // Show typing indicator
+            showTypingIndicator();
+            
+            try {
+                const memorySize = parseInt(memoryLength.value);
+                const conversationalMessages = messages.filter(msg => msg.role !== 'system');
+                let recentMessages = conversationalMessages.slice(-memorySize);
+                
+                recentMessages.unshift({
+                    role: 'system',
+                    content: getCharacterPrompt(currentCharacterType)
+                });
+                
+                const response = await fetch('https://api.together.xyz/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKeyInput.value}`
+                    },
+                    body: JSON.stringify({
+                        model: modelSelect.value,
+                        messages: recentMessages,
+                        temperature: 0.8, // Slightly higher temperature for variation
+                        max_tokens: 1000,
+                        stop: ['</s>']
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} - ${await response.text()}`);
+                }
+                
+                const data = await response.json();
+                const botMessage = data.choices[0].message;
+                
+                const currentAvatar = characters[currentCharacterType].avatar;
+                
+                const fullBotMessage = {
+                    role: 'assistant',
+                    content: botMessage.content,
+                    timestamp: new Date().toISOString(),
+                    avatar: currentAvatar
+                };
+                
+                messages.push(fullBotMessage);
+                lastBotMessage = fullBotMessage;
+                
+                hideTypingIndicator();
+                addMessage('assistant', botMessage.content, currentAvatar);
+                updateMemoryIndicator();
+                
+                // Save to localStorage
+                localStorage.setItem('characters', JSON.stringify(characters));
+                localStorage.setItem('currentCharacter', currentCharacterType);
+                
+            } catch (error) {
+                hideTypingIndicator();
+                console.error('Error:', error);
+                const errorMessage = {
+                    role: 'assistant',
+                    content: `Sorry, I encountered an error while regenerating: ${error.message}. Please try again.`,
+                    timestamp: new Date().toISOString(),
+                    avatar: characters[currentCharacterType].avatar
+                };
+                messages.push(errorMessage);
+                addMessage('assistant', errorMessage.content, errorMessage.avatar);
+            }
+        }
+        
+        // Continue last bot message
+        async function continueMessage() {
+            if (!currentCharacterType || !lastBotMessage) return;
+            
+            showTypingIndicator();
+            
+            try {
+                const memorySize = parseInt(memoryLength.value);
+                const conversationalMessages = messages.filter(msg => msg.role !== 'system');
+                let recentMessages = conversationalMessages.slice(-memorySize);
+                
+                recentMessages.unshift({
+                    role: 'system',
+                    content: getCharacterPrompt(currentCharacterType)
+                });
+                
+                recentMessages.push({
+                    role: 'user',
+                    content: 'Please continue your last message.'
+                });
+                
+                const response = await fetch('https://api.together.xyz/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKeyInput.value}`
+                    },
+                    body: JSON.stringify({
+                        model: modelSelect.value,
+                        messages: recentMessages,
+                        temperature: 0.7,
+                        max_tokens: 1000,
+                        stop: ['</s>']
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} - ${await response.text()}`);
+                }
+                
+                const data = await response.json();
+                const continuedContent = data.choices[0].message.content;
+                
+                // Append the continued content to the last bot message
+                lastBotMessage.content += " " + continuedContent;
+                
+                hideTypingIndicator();
+                renderMessages();
+                updateMemoryIndicator();
+                
+                // Save to localStorage
+                localStorage.setItem('characters', JSON.stringify(characters));
+                localStorage.setItem('currentCharacter', currentCharacterType);
+                
+            } catch (error) {
+                hideTypingIndicator();
+                console.error('Error:', error);
+                const errorMessage = {
+                    role: 'assistant',
+                    content: `Sorry, I encountered an error while continuing: ${error.message}. Please try again.`,
+                    timestamp: new Date().toISOString(),
+                    avatar: characters[currentCharacterType].avatar
+                };
+                messages.push(errorMessage);
+                addMessage('assistant', errorMessage.content, errorMessage.avatar);
+            }
+        }
+
+        // Undo last exchange (user message + bot message)
+        function undoMessage() {
+            if (!currentCharacterType) return;
+            
+            hideTypingIndicator();
+            const originalMessagesLength = messages.length;
+            
+            // Remove the last bot message
+            if (lastBotMessage) {
+                messages = messages.filter(msg => msg !== lastBotMessage);
+                lastBotMessage = null;
+            }
+            // Remove the last user message
+            if (lastUserMessage) {
+                messages = messages.filter(msg => msg !== lastUserMessage);
+                lastUserMessage = null;
+            }
+
+            if (messages.length < originalMessagesLength) {
+                renderMessages();
+                updateMemoryIndicator();
+                
+                // Save to localStorage
+                localStorage.setItem('characters', JSON.stringify(characters));
+                localStorage.setItem('currentCharacter', currentCharacterType);
+            }
+        }
+        
+        // Update memory indicator
+        function updateMemoryIndicator() {
+            const currentMessagesCount = messages.filter(msg => msg.role !== 'system').length;
+            const maxMemory = parseInt(memoryLength.value);
+            memoryIndicator.textContent = `Memory: ${currentMessagesCount}/${maxMemory} messages`;
+        }
+
+        // Initialize the app
+        function init() {
+            // Disable chat input and buttons by default (until character is selected)
+            chatInput.disabled = true;
+            sendButton.disabled = true;
+            regenerateButton.disabled = true;
+            continueButton.disabled = true;
+            undoButton.disabled = true;
+            
+            // Load any saved characters and state
+            loadFromLocalStorage();
+            
+            // Render character options (will show "no characters" message if empty)
+            renderCharacterOptions();
+        }
+
+        // Start the app when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
