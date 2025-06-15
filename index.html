@@ -847,6 +847,26 @@
             <input type="number" id="memoryLength" min="1" placeholder="Unlimited (leave empty)">
             <div style="color: #b3b3b3; font-size: 0.85em;">Set to 1 for minimal memory, empty for unlimited</div>
         </div>
+        <div class="setting-group">
+            <h3><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-save"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Data Management</h3>
+            <button class="action-button" id="exportChatButton" style="width: 100%; margin-bottom: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-download">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Export Chat History
+            </button>
+            <button class="action-button" id="importChatButton" style="width: 100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-upload">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Import Chat History
+            </button>
+            <input type="file" id="importChatFileInput" accept=".json" style="display: none;">
+        </div>
     </div>
     
     <div class="container">
@@ -864,6 +884,7 @@
                 <button class="action-button" id="regenerateButton">Regenerate</button>
                 <button class="action-button" id="continueButton">Continue</button>
                 <button class="action-button" id="undoButton">Undo</button>
+                <button class="action-button" id="clearChatButton">Clear</button>
             </div>
             
             <div class="chat-messages" id="chatMessages">
@@ -900,6 +921,7 @@
         const regenerateButton = document.getElementById('regenerateButton');
         const continueButton = document.getElementById('continueButton');
         const undoButton = document.getElementById('undoButton');
+        const clearChatButton = document.getElementById('clearChatButton');
         const settingsButton = document.getElementById('settingsButton');
         const closeSettings = document.getElementById('closeSettings');
         const settingsPanel = document.getElementById('settingsPanel');
@@ -911,6 +933,9 @@
         const apiKeyInput = document.getElementById('apiKey');
         const modelSelect = document.getElementById('modelSelect');
         const maxTokens = document.getElementById('maxTokens');
+        const exportChatButton = document.getElementById('exportChatButton');
+        const importChatButton = document.getElementById('importChatButton');
+        const importChatFileInput = document.getElementById('importChatFileInput');
 
         // New Character Elements
         const addNewCharacterButton = document.getElementById('addNewCharacterButton');
@@ -949,6 +974,7 @@
         regenerateButton.addEventListener('click', regenerateMessage);
         continueButton.addEventListener('click', continueMessage);
         undoButton.addEventListener('click', undoMessage);
+        clearChatButton.addEventListener('click', clearChat);
         
         settingsButton.addEventListener('click', () => {
             settingsPanel.classList.add('open');
@@ -960,6 +986,10 @@
         });
         
         memoryLength.addEventListener('input', updateMemoryIndicator);
+        
+        exportChatButton.addEventListener('click', exportChatHistory);
+        importChatButton.addEventListener('click', () => importChatFileInput.click());
+        importChatFileInput.addEventListener('change', importChatHistory);
         
         characterOptionsDiv.addEventListener('click', (e) => {
             const characterOption = e.target.closest('.character-option');
@@ -974,6 +1004,7 @@
                 regenerateButton.disabled = false;
                 continueButton.disabled = false;
                 undoButton.disabled = false;
+                clearChatButton.disabled = false;
                 
                 // Clear existing messages and start new chat with selected character
                 messages = []; 
@@ -997,7 +1028,7 @@
                 updateMemoryIndicator();
                 
                 // Save to localStorage
-                localStorage.setItem('currentCharacter', currentCharacterType);
+                saveChatState();
             }
         });
 
@@ -1073,6 +1104,7 @@
                 regenerateButton.disabled = false;
                 continueButton.disabled = false;
                 undoButton.disabled = false;
+                clearChatButton.disabled = false;
                 
                 // Clear welcome message and start chat with new character
                 messages = [];
@@ -1099,9 +1131,21 @@
             addNewCharacterButton.style.display = 'flex';
             
             // Save to localStorage
+            saveChatState();
+        });
+
+        // Save the current chat state to localStorage
+        function saveChatState() {
             localStorage.setItem('characters', JSON.stringify(characters));
             localStorage.setItem('currentCharacter', currentCharacterType);
-        });
+            localStorage.setItem('maxTokens', maxTokens.value);
+            localStorage.setItem('memoryLength', memoryLength.value);
+            
+            // Save messages only if we have a character selected
+            if (currentCharacterType) {
+                localStorage.setItem(`chatMessages_${currentCharacterType}`, JSON.stringify(messages));
+            }
+        }
 
         // Load characters from localStorage if available
         function loadFromLocalStorage() {
@@ -1119,24 +1163,32 @@
                     regenerateButton.disabled = false;
                     continueButton.disabled = false;
                     undoButton.disabled = false;
+                    clearChatButton.disabled = false;
                     
-                    // Clear welcome message and show character greeting
-                    messages = [];
-                    chatMessages.innerHTML = '';
-                    
-                    const char = characters[currentCharacterType];
-                    addMessage('assistant', char.greeting, char.avatar);
-                    messages.push({
-                        role: 'assistant',
-                        content: char.greeting,
-                        timestamp: new Date().toISOString(),
-                        avatar: char.avatar
-                    });
-                    
-                    messages.unshift({
-                        role: 'system',
-                        content: char.prompt
-                    });
+                    // Load saved messages for this character
+                    const savedMessages = localStorage.getItem(`chatMessages_${currentCharacterType}`);
+                    if (savedMessages) {
+                        messages = JSON.parse(savedMessages);
+                        renderMessages();
+                    } else {
+                        // No saved messages - start fresh with greeting
+                        messages = [];
+                        chatMessages.innerHTML = '';
+                        
+                        const char = characters[currentCharacterType];
+                        addMessage('assistant', char.greeting, char.avatar);
+                        messages.push({
+                            role: 'assistant',
+                            content: char.greeting,
+                            timestamp: new Date().toISOString(),
+                            avatar: char.avatar
+                        });
+                        
+                        messages.unshift({
+                            role: 'system',
+                            content: char.prompt
+                        });
+                    }
                     
                     updateMemoryIndicator();
                 }
@@ -1275,6 +1327,127 @@
             memoryIndicatorText.textContent = `Memory: ${currentMessagesCount}/${memorySize} messages`;
         }
 
+        // Clear the chat
+        function clearChat() {
+            if (!currentCharacterType || !confirm('Are you sure you want to clear the chat history?')) return;
+            
+            // Keep only the system message
+            const systemMessage = messages.find(msg => msg.role === 'system');
+            messages = systemMessage ? [systemMessage] : [];
+            
+            // Clear the chat UI
+            chatMessages.innerHTML = '';
+            
+            // Add the character's greeting
+            const char = characters[currentCharacterType];
+            addMessage('assistant', char.greeting, char.avatar);
+            messages.push({
+                role: 'assistant',
+                content: char.greeting,
+                timestamp: new Date().toISOString(),
+                avatar: char.avatar
+            });
+            
+            // Reset message tracking
+            lastUserMessage = null;
+            lastBotMessage = null;
+            
+            updateMemoryIndicator();
+            saveChatState();
+        }
+
+        // Export chat history to a JSON file
+        function exportChatHistory() {
+            if (!currentCharacterType || messages.length === 0) {
+                alert('No chat history to export.');
+                return;
+            }
+            
+            const exportData = {
+                character: currentCharacterType,
+                messages: messages,
+                timestamp: new Date().toISOString()
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+            
+            const exportFileName = `chat_${currentCharacterType}_${new Date().toISOString().slice(0, 10)}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileName);
+            linkElement.click();
+        }
+
+        // Import chat history from a JSON file
+        function importChatHistory(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Verify the data structure
+                    if (!importedData.character || !importedData.messages || !Array.isArray(importedData.messages)) {
+                        throw new Error('Invalid chat history file format.');
+                    }
+                    
+                    // Check if we have this character
+                    if (!characters[importedData.character]) {
+                        throw new Error(`Character "${importedData.character}" not found.`);
+                    }
+                    
+                    // Confirm with user
+                    if (!confirm(`Import chat history for ${characters[importedData.character].name}? This will replace your current chat.`)) {
+                        return;
+                    }
+                    
+                    // Set the character if not already selected
+                    if (currentCharacterType !== importedData.character) {
+                        currentCharacterType = importedData.character;
+                        currentCharacterDisplay.textContent = characters[currentCharacterType].name;
+                    }
+                    
+                    // Load the messages
+                    messages = importedData.messages;
+                    
+                    // Render the messages
+                    renderMessages();
+                    
+                    // Update last message references
+                    const userMessages = messages.filter(msg => msg.role === 'user');
+                    const botMessages = messages.filter(msg => msg.role === 'assistant');
+                    
+                    lastUserMessage = userMessages.length > 0 ? userMessages[userMessages.length - 1] : null;
+                    lastBotMessage = botMessages.length > 0 ? botMessages[botMessages.length - 1] : null;
+                    
+                    updateMemoryIndicator();
+                    saveChatState();
+                    
+                    // Enable chat input and buttons if not already
+                    chatInput.disabled = false;
+                    sendButton.disabled = false;
+                    regenerateButton.disabled = false;
+                    continueButton.disabled = false;
+                    undoButton.disabled = false;
+                    clearChatButton.disabled = false;
+                    
+                    alert('Chat history imported successfully!');
+                    
+                } catch (error) {
+                    console.error('Error importing chat history:', error);
+                    alert(`Error importing chat history: ${error.message}`);
+                }
+                
+                // Reset the file input
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
         // Send message
         async function sendMessage() {
             if (!currentCharacterType) return;
@@ -1370,9 +1543,7 @@
                 updateMemoryIndicator();
                 
                 // Save to localStorage
-                localStorage.setItem('characters', JSON.stringify(characters));
-                localStorage.setItem('currentCharacter', currentCharacterType);
-                localStorage.setItem('maxTokens', maxTokens.value);
+                saveChatState();
                 
             } catch (error) {
                 hideTypingIndicator();
@@ -1388,6 +1559,7 @@
                 
                 messages.push(errorMessage);
                 addMessage('assistant', errorMessage.content, errorMessage.avatar);
+                saveChatState();
             }
         }
         
@@ -1476,8 +1648,7 @@
                 updateMemoryIndicator();
                 
                 // Save to localStorage
-                localStorage.setItem('characters', JSON.stringify(characters));
-                localStorage.setItem('currentCharacter', currentCharacterType);
+                saveChatState();
                 
             } catch (error) {
                 hideTypingIndicator();
@@ -1490,6 +1661,7 @@
                 };
                 messages.push(errorMessage);
                 addMessage('assistant', errorMessage.content, errorMessage.avatar);
+                saveChatState();
             }
         }
         
@@ -1566,8 +1738,7 @@
                 updateMemoryIndicator();
                 
                 // Save to localStorage
-                localStorage.setItem('characters', JSON.stringify(characters));
-                localStorage.setItem('currentCharacter', currentCharacterType);
+                saveChatState();
                 
             } catch (error) {
                 hideTypingIndicator();
@@ -1580,6 +1751,7 @@
                 };
                 messages.push(errorMessage);
                 addMessage('assistant', errorMessage.content, errorMessage.avatar);
+                saveChatState();
             }
         }
 
@@ -1606,8 +1778,7 @@
                 updateMemoryIndicator();
                 
                 // Save to localStorage
-                localStorage.setItem('characters', JSON.stringify(characters));
-                localStorage.setItem('currentCharacter', currentCharacterType);
+                saveChatState();
             }
         }
 
@@ -1619,6 +1790,7 @@
             regenerateButton.disabled = true;
             continueButton.disabled = true;
             undoButton.disabled = true;
+            clearChatButton.disabled = true;
             
             // Load any saved characters and state
             loadFromLocalStorage();
