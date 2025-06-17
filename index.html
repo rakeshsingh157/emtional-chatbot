@@ -743,7 +743,7 @@
     border-top-right-radius: 20px;
     padding: 14px 18px 14px 60px; /* Added padding to all sides */
     position: relative;
-    min-height: 60px; /* Ensure minimum height for avatar */
+    min-height: auto; /* Ensure minimum height for avatar */
 }
 
 .assistant-message .avatar {
@@ -763,7 +763,7 @@
 @media (max-width: 600px) {
     .assistant-message {
         padding-left: 50px;
-        min-height: 50px;
+        min-height: auto;
     }
     
     .assistant-message .avatar {
@@ -1106,7 +1106,7 @@
                 undoButton.disabled = false;
                 clearChatButton.disabled = false;
                 
-                // Clear welcome message and start chat with new character
+                
                 messages = [];
                 chatMessages.innerHTML = '';
                 
